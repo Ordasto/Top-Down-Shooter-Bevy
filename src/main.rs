@@ -23,6 +23,7 @@ fn main() {
         .add_startup_system(setup_entities)
         .add_system(window_resized)
         .add_system(aim_at_mouse)
+        .add_system(player_movement)
         
         .run();
 }
@@ -89,6 +90,14 @@ fn aim_at_mouse (
             trans.look_at(vec3(x, y, 999.9), vec3(mouse_x, mouse_y, 0.0));
         }
     }
+}
+
+fn player_movement(
+    // player comp quer,
+    // Keyboard input events
+    // camera to move
+) {
+
 }
 
 fn setup_window(
