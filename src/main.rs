@@ -132,7 +132,8 @@ fn player_movement(
     // Loose camera follow could be done by checking dist from player to camera and applying velocity*speed to them if it's larger than a arbitrary follow dist thingy
     // for dist theres probably an inbuilt function or pythagoras or just check x and y and move them seperatly
 
-    // Cba right now it doesn't matter as much as getting normal functionality going, like shooting and stuff (do it if i can't be bothered with other shit)
+    // Cba right now it doesn't matter as much as getting normal functionality going like shooting and stuff (do it if i can't be bothered with other shit)
+    // I also just realised i don't have an actual plan for what this game is about lmao, just mindlessly making games for some fucking reason
 
     
 }
