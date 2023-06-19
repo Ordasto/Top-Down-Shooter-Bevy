@@ -8,6 +8,9 @@ struct LookAtMouse();
 #[derive(Component)]
 struct MouseCursorObj();
 
+#[derive(Component)]
+struct PlayerObj();
+
 #[derive(Resource)]
 struct WindowSize {
     width:f32,
@@ -22,8 +25,8 @@ fn main() {
         .add_startup_system(setup_window)
         .add_startup_system(setup_entities)
         .add_system(window_resized)
-        .add_system(aim_at_mouse)
         .add_system(player_movement)
+        .add_system(aim_at_mouse)
         
         .run();
 }
@@ -61,7 +64,7 @@ fn setup_entities(
             transform: Transform::from_translation(ball_pos),
             ..default()
         },
-        LookAtMouse{},
+        PlayerObj{},
     ));
 }
 
@@ -69,35 +72,69 @@ fn setup_entities(
 
 fn aim_at_mouse (
     mut mouse: EventReader<CursorMoved>,
-    mut look_at_mouse: Query<(&mut Transform), (With<LookAtMouse>, Without<MouseCursorObj>)>,
-    mut cursor_obj: Query<(&mut Transform), (With<MouseCursorObj>, Without<LookAtMouse>)>,
+    mut look_at_mouse: Query<&mut Transform, (With<PlayerObj>, Without<MouseCursorObj>)>,
+    mut cursor_obj: Query<&mut Transform, (With<MouseCursorObj>, Without<LookAtMouse>)>,
     window_size: Res<WindowSize>,
 ) {
+    let mut curser_obj = cursor_obj.get_single_mut().expect("cursor Object brokie");
+    let mut player = look_at_mouse.get_single_mut().expect("Player obj brokie");
 
     for ev in mouse.iter() {
 
-        let mouse_x = ev.position.x - window_size.width/2.0;
-        let mouse_y = ev.position.y - window_size.height/2.0;
+        curser_obj.translation.x = ev.position.x - window_size.width/2.0;
+        curser_obj.translation.y = ev.position.y - window_size.height/2.0;
 
-        for mut trans in &mut cursor_obj{
-            trans.translation.x = mouse_x;
-            trans.translation.y = mouse_y;
-        }
-
-        for mut trans in &mut look_at_mouse {
-            let x = trans.translation.x;
-            let y = trans.translation.y;
-            trans.look_at(vec3(x, y, 999.9), vec3(mouse_x, mouse_y, 0.0));
-        }
     }
+
+    let x = player.translation.x;
+    let y = player.translation.y;
+
+    player.look_at(
+        vec3(x, y, 999.9),
+        vec3(curser_obj.translation.x-x, curser_obj.translation.y-y, 0.0)
+    );
+
 }
 
 fn player_movement(
-    // player comp quer,
-    // Keyboard input events
+    // player comp query
+    mut player: Query<&mut Transform, With<PlayerObj>>,
     // camera to move
+    mut camera: Query<&mut Transform, (With<Camera>, Without<PlayerObj>)>,
+    // Keyboard input events
+    keyboard_input: Res<Input<KeyCode>>,
 ) {
+    let mut player = player.get_single_mut().expect("No players or more than one player");
+    let mut camera = camera.get_single_mut().expect("No camera or more than one camera");
 
+    // to normalise the speed when going diagonal, add keypress speeds to a vector than normalise the vector, then add this vector the the player.translation
+    // This vec3 just allows me to normalise speed when going diagonal to avoid diagonal movement being faster then normal movement
+    let mut velocity = vec3(0.0, 0.0, 0.0);
+
+    // players speed, might move to a resource to allow it to be modified by other functions
+    let speed = 5.0;
+    
+    if keyboard_input.pressed(KeyCode::W) {
+        velocity.y += 1.0;
+    }
+    if keyboard_input.pressed(KeyCode::S) {
+        velocity.y -= 1.0
+    }
+    if keyboard_input.pressed(KeyCode::D) {
+        velocity.x += 1.0;
+    }
+    if keyboard_input.pressed(KeyCode::A) {
+        velocity.x -= 1.0;
+    }
+
+    player.translation += velocity.normalize_or_zero() * speed;
+    
+    // Loose camera follow could be done by checking dist from player to camera and applying velocity*speed to them if it's larger than a arbitrary follow dist thingy
+    // for dist theres probably an inbuilt function or pythagoras or just check x and y and move them seperatly
+
+    // Cba right now it doesn't matter as much as getting normal functionality going, like shooting and stuff (do it if i can't be bothered with other shit)
+
+    
 }
 
 fn setup_window(
