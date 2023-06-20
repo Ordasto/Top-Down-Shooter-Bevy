@@ -1,9 +1,15 @@
-use bevy::{prelude::*, window::WindowResized, math::vec3, diagnostic::Diagnostics};
+use bevy::{prelude::*, window::WindowResized, math::{vec3, vec2}, diagnostic::Diagnostics};
 
 const BACKGROUND_COLOR:Color = Color::rgb(0.15, 0.15, 0.15);
 
 #[derive(Component)]
 struct FpsCounter;
+
+#[derive(Component)]
+struct RayCollision;
+
+#[derive(Component)]
+struct RayObj;
 
 #[derive(Component)]
 struct MouseCursorObj;
@@ -21,16 +27,21 @@ fn main() {
     App::new()
         .insert_resource(ClearColor( BACKGROUND_COLOR ))
         .insert_resource(WindowSize{width:100.0,height:100.0})
+
         .add_plugins(DefaultPlugins)
         .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
+
         .add_startup_system(setup_window)
         .add_startup_system(setup_entities)
         .add_startup_system(setup_ui)
+
         .add_system(window_resized)
         .add_system(player_movement)
         .add_system(aim_at_mouse)
         .add_system(firing_test)
+        .add_system(draw_ray)
         .add_system(update_fps_counter)
+
         .run();
 }
 
@@ -69,6 +80,44 @@ fn setup_entities(
         },
         PlayerObj,
     ));
+
+
+
+    // Test Collision object
+    let quad_radius = 8.0;
+    let quad_mesh:Mesh = shape::Quad::new(vec2(50.0, 20.0)).into();
+    let quad_material = ColorMaterial::from(Color::rgb(100.,100.,100.));
+    let quad_pos: Vec3 = Vec3::new(100.0, 200.0, 0.0);
+
+    commands.spawn(( 
+        ColorMesh2dBundle {
+            mesh: meshes.add(quad_mesh).into(),
+            material: materials.add(quad_material),
+            transform: Transform::from_translation(quad_pos),
+            ..default()
+        },
+        RayCollision
+    ));
+
+
+    // testing ray object
+    let quad_radius = 8.0;
+    let quad_mesh:Mesh = shape::Quad::new(vec2(1.0, 1.0)).into();
+    let quad_material = ColorMaterial::from(Color::rgb(100.,100.,100.));
+    let quad_pos: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+
+    commands.spawn(( 
+        ColorMesh2dBundle {
+            mesh: meshes.add(quad_mesh).into(),
+            material: materials.add(quad_material),
+            transform: Transform::from_translation(quad_pos),
+            ..default()
+        },
+        RayObj
+    ));
+
+
+
 }
 
 
@@ -144,11 +193,52 @@ fn player_movement(
 fn firing_test(
     player: Query<&Transform, With<PlayerObj>>,
     cursor_obj: Query<&Transform, With<MouseCursorObj>>,
-    
+    collision_objects: Query<&bevy::sprite::Mesh2dHandle, With<RayCollision>>,
+    meshes: Res<Assets<Mesh>>,
+
+    // for debug coloring ray_object
+    mut ray_object: Query<&Handle<ColorMaterial>, With<RayObj>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    let player = player.single();
+    let cursor = cursor_obj.single();
+
+    // Not sure if this will be useful or not
+    let ray_cast = Ray { origin: player.translation, direction: player.translation-cursor.translation };
+
+
+    // For debug coloring ray object thingy
+    let mut ray_obj_material = materials.get_mut(ray_object.single_mut()).unwrap();
     
+
+    // Time to do collision, if ray intersects any mesh objects, color ray_obj_material red or something
+    for i in &collision_objects {
+        let collision_mesh = meshes.get(&i.0).unwrap();
+    }
 }
 
+fn draw_ray(
+    player: Query<&Transform, With<PlayerObj>>,
+    cursor_obj: Query<&Transform, With<MouseCursorObj>>,
+    mut ray_object: Query<&mut Transform, (With<RayObj>, Without<PlayerObj>, Without<MouseCursorObj>)>,
+) {
+    let player = player.single();
+    let cursor = cursor_obj.single();
+    let mut ray_obj = ray_object.single_mut();
+    
+    let player_cursor_dist = player.translation.distance(cursor.translation);
+
+    ray_obj.scale = vec3(1.0, player_cursor_dist, 1.0);
+    
+    ray_obj.translation = -(player.translation-cursor.translation)/2.0;
+    
+    let ray_vec = ray_obj.translation;
+
+    ray_obj.look_at(
+        vec3(ray_vec.x, ray_vec.y, 999.9),
+        vec3(cursor.translation.x, cursor.translation.y, 0.0)
+    );
+}
 
 
 
