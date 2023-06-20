@@ -1,15 +1,15 @@
-use bevy::{prelude::*, window::WindowResized, math::vec3};
+use bevy::{prelude::*, window::WindowResized, math::vec3, diagnostic::Diagnostics};
 
 const BACKGROUND_COLOR:Color = Color::rgb(0.15, 0.15, 0.15);
 
 #[derive(Component)]
-struct LookAtMouse();
+struct FpsCounter;
 
 #[derive(Component)]
-struct MouseCursorObj();
+struct MouseCursorObj;
 
 #[derive(Component)]
-struct PlayerObj();
+struct PlayerObj;
 
 #[derive(Resource)]
 struct WindowSize {
@@ -22,12 +22,15 @@ fn main() {
         .insert_resource(ClearColor( BACKGROUND_COLOR ))
         .insert_resource(WindowSize{width:100.0,height:100.0})
         .add_plugins(DefaultPlugins)
+        .add_plugin(bevy::diagnostic::FrameTimeDiagnosticsPlugin::default())
         .add_startup_system(setup_window)
         .add_startup_system(setup_entities)
+        .add_startup_system(setup_ui)
         .add_system(window_resized)
         .add_system(player_movement)
         .add_system(aim_at_mouse)
-        
+        .add_system(firing_test)
+        .add_system(update_fps_counter)
         .run();
 }
 
@@ -50,7 +53,7 @@ fn setup_entities(
             transform: Transform::from_translation(ball_pos),
             ..default()
         },
-        MouseCursorObj{},
+        MouseCursorObj,
     ));
 
     let triangle_mesh:Mesh = shape::RegularPolygon::new(20.0, 3).into();
@@ -64,7 +67,7 @@ fn setup_entities(
             transform: Transform::from_translation(ball_pos),
             ..default()
         },
-        PlayerObj{},
+        PlayerObj,
     ));
 }
 
@@ -73,16 +76,16 @@ fn setup_entities(
 fn aim_at_mouse (
     mut mouse: EventReader<CursorMoved>,
     mut look_at_mouse: Query<&mut Transform, (With<PlayerObj>, Without<MouseCursorObj>)>,
-    mut cursor_obj: Query<&mut Transform, (With<MouseCursorObj>, Without<LookAtMouse>)>,
+    mut cursor_obj: Query<&mut Transform, (With<MouseCursorObj>, Without<PlayerObj>)>,
     window_size: Res<WindowSize>,
 ) {
-    let mut curser_obj = cursor_obj.get_single_mut().expect("cursor Object brokie");
+    let mut cursor_obj = cursor_obj.get_single_mut().expect("cursor Object brokie");
     let mut player = look_at_mouse.get_single_mut().expect("Player obj brokie");
 
     for ev in mouse.iter() {
 
-        curser_obj.translation.x = ev.position.x - window_size.width/2.0;
-        curser_obj.translation.y = ev.position.y - window_size.height/2.0;
+        cursor_obj.translation.x = ev.position.x - window_size.width/2.0;
+        cursor_obj.translation.y = ev.position.y - window_size.height/2.0;
 
     }
 
@@ -91,7 +94,7 @@ fn aim_at_mouse (
 
     player.look_at(
         vec3(x, y, 999.9),
-        vec3(curser_obj.translation.x-x, curser_obj.translation.y-y, 0.0)
+        vec3(cursor_obj.translation.x-x, cursor_obj.translation.y-y, 0.0)
     );
 
 }
@@ -137,6 +140,58 @@ fn player_movement(
 
     
 }
+
+fn firing_test(
+    player: Query<&Transform, With<PlayerObj>>,
+    cursor_obj: Query<&Transform, With<MouseCursorObj>>,
+    
+) {
+    
+}
+
+
+
+
+
+
+// Should probably move the fps counter functions to a plugin or whatever
+fn update_fps_counter(
+    mut fps_counter_qur: Query<&mut Text, With<FpsCounter>>,
+    diag: Res<Diagnostics>,
+) {
+    // MY EYES
+    let fps = diag.get(bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS).and_then(|fps| fps.average()).unwrap_or(0.0);
+    let mut fps_counter = fps_counter_qur.get_single_mut().expect("fps counter doesn't exist");
+    fps_counter.sections[0].value = format!("fps:{:.5}",fps).to_string();
+}
+
+
+fn setup_ui(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    window: Res<WindowSize>
+) {
+    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
+
+    let text_style = TextStyle {
+        font: font.clone(),
+        font_size: 20.0,
+        color: Color::WHITE,
+    };
+
+    let text_alignment = TextAlignment::Left;
+
+    commands.spawn((
+        Text2dBundle{
+            text: Text::from_section("fps:", text_style.clone()).with_alignment(text_alignment),
+            transform: Transform::from_translation( vec3(-window.width/2.0, window.height/2.0, 0.0)),
+            text_anchor: bevy::sprite::Anchor::TopLeft,
+            ..default()
+        },
+        FpsCounter,
+    ));
+}
+
 
 fn setup_window(
     mut resize_event: EventReader<WindowResized>,
