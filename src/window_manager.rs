@@ -29,16 +29,17 @@ impl Plugin for WindowManager {
     }
 }
 
-
 fn update_fps_counter(
-    mut fps_counter_qur: Query<&mut Text, With<FpsCounter>>,
+    mut fps_counter_qur: Query<(&mut Text, &mut Transform), With<FpsCounter>>,
     diag: Res<Diagnostics>,
+    window: Res<WindowSize>,
 ) {
     // MY EYES
     let fps = diag.get(bevy::diagnostic::FrameTimeDiagnosticsPlugin::FPS).and_then(|fps| fps.average()).unwrap_or(0.0);
     let mut fps_counter = fps_counter_qur.get_single_mut().expect("fps counter doesn't exist");
     // the "{:.5}" is the number of decimal places to display ("{:.3}" would display 3 decimal places)
-    fps_counter.sections[0].value = format!("fps:{:.5}",fps).to_string();
+    fps_counter.0.sections[0].value = format!("fps:{:.5}",fps).to_string();
+    fps_counter.1.translation = vec3(-window.width/2.0, window.height/2.0, 0.0);
 }
 
 fn setup_fps_counter(

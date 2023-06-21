@@ -154,7 +154,6 @@ fn player_movement(
     let mut player = player.get_single_mut().expect("No players or more than one player");
     let mut camera = camera.get_single_mut().expect("No camera or more than one camera");
 
-    // to normalise the speed when going diagonal, add keypress speeds to a vector than normalise the vector, then add this vector the the player.translation
     // This vec3 just allows me to normalise speed when going diagonal to avoid diagonal movement being faster then normal movement
     let mut velocity = vec3(0.0, 0.0, 0.0);
 
