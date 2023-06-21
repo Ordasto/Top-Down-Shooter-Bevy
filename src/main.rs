@@ -34,7 +34,6 @@ fn main() {
         .add_startup_system(setup_window)
         .add_startup_system(setup_entities)
         .add_startup_system(setup_ui)
-
         .add_system(window_resized)
         .add_system(player_movement)
         .add_system(aim_at_mouse)
@@ -115,12 +114,14 @@ fn setup_entities(
         },
         RayObj
     ));
-
+    
 
 
 }
 
-
+fn mouse_pos_res() {
+    
+}
 
 fn aim_at_mouse (
     mut mouse: EventReader<CursorMoved>,
@@ -212,10 +213,13 @@ fn firing_test(
     
 
     // Time to do collision, if ray intersects any mesh objects, color ray_obj_material red or something
+    // No idea how to do this so time for some fun READING
     for i in &collision_objects {
         let collision_mesh = meshes.get(&i.0).unwrap();
     }
 }
+
+
 
 fn draw_ray(
     player: Query<&Transform, With<PlayerObj>>,
@@ -226,22 +230,16 @@ fn draw_ray(
     let cursor = cursor_obj.single();
     let mut ray_obj = ray_object.single_mut();
     
-    let player_cursor_dist = player.translation.distance(cursor.translation);
-
-    ray_obj.scale = vec3(1.0, player_cursor_dist, 1.0);
     
-    ray_obj.translation = -(player.translation-cursor.translation)/2.0;
-    
-    let ray_vec = ray_obj.translation;
-
+    let ct = cursor.translation;
+    let rt = ray_obj.translation;
     ray_obj.look_at(
-        vec3(ray_vec.x, ray_vec.y, 999.9),
-        vec3(cursor.translation.x, cursor.translation.y, 0.0)
+        vec3(rt.x, rt.y, 999.9),
+        vec3(ct.x-rt.x, ct.y-rt.y, 0.0)
     );
+    ray_obj.translation = ((cursor.translation-player.translation)/2.0)+player.translation;
+    ray_obj.scale.y = player.translation.distance(cursor.translation);
 }
-
-
-
 
 
 // Should probably move the fps counter functions to a plugin or whatever
