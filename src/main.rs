@@ -1,4 +1,4 @@
-use bevy::{prelude::*, math::{vec3, vec2}};
+use bevy::{prelude::*, math::{vec3, vec2}, sprite::collide_aabb};
 mod window_manager;
 use window_manager::*;
 const BACKGROUND_COLOR:Color = Color::rgb(0.15, 0.15, 0.15);
@@ -186,7 +186,7 @@ fn player_movement(
 fn firing_test(
     player: Query<&Transform, With<PlayerObj>>,
     cursor_obj: Query<&Transform, With<MouseCursorObj>>,
-    collision_objects: Query<&bevy::sprite::Mesh2dHandle, With<RayCollision>>,
+    collision_objects: Query<(&bevy::sprite::Mesh2dHandle, &Transform), With<RayCollision>>,
     meshes: Res<Assets<Mesh>>,
 
     // for debug coloring ray_object
@@ -199,16 +199,22 @@ fn firing_test(
     // Not sure if this will be useful or not
     let ray_cast = Ray { origin: player.translation, direction: player.translation-cursor.translation };
 
-
     // For debug coloring ray object thingy
     let mut ray_obj_material = materials.get_mut(ray_object.single_mut()).unwrap();
+
+
     
 
-    // Time to do collision, if ray intersects any mesh objects, color ray_obj_material red or something
-    // No idea how to do this so time for some fun READING
-    for i in &collision_objects {
-        let collision_mesh = meshes.get(&i.0).unwrap();
-    }
+
+    // [IDEA]
+    // could compute distance of all potential collisions and then check the point on the ray at each of those points
+    // This could be super inefficient but for a first collision version it should be fine, also don't need to deal with meshes
+    // Just use mesh.compute_aabb() to determine collision for now,
+    // Might be quicker to collide_aabb::colide() with the aabb box of the target and just a long rectangle lmao
+
+    // for (i,tran) in &collision_objects {
+    //     let collision_mesh = meshes.get(&i.0).unwrap();
+    // }   
 }
 
 fn draw_ray(
