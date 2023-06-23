@@ -185,32 +185,40 @@ fn player_movement(
 
 fn firing_test(
     player: Query<&Transform, With<PlayerObj>>,
-    cursor_obj: Query<&Transform, With<MouseCursorObj>>,
+    mut cursor_obj: Query<&mut Transform, (With<MouseCursorObj>, Without<PlayerObj>, Without<RayCollision>)>,
     collision_objects: Query<(&bevy::sprite::Mesh2dHandle, &Transform), With<RayCollision>>,
     meshes: Res<Assets<Mesh>>,
+    mouse_pos: Res<MousePosition>,
 
     // for debug coloring ray_object
     mut ray_object: Query<&Handle<ColorMaterial>, With<RayObj>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let player = player.single();
-    let cursor = cursor_obj.single();
-
-    // Not sure if this will be useful or not
-    let ray_cast = Ray { origin: player.translation, direction: player.translation-cursor.translation };
-
-    // For debug coloring ray object thingy
     let mut ray_obj_material = materials.get_mut(ray_object.single_mut()).unwrap();
 
+    let player = player.single();
+    let mut cursor = cursor_obj.single_mut();
+
+
+
+    let dir = -vec3(player.translation.x-mouse_pos.x, player.translation.y-mouse_pos.y, player.translation.z).normalize();
+    let ray_cast = Ray { origin: player.translation, direction: dir};
 
     
+    
+    // These two lines do the same thing as far as i can tell so theres no point using a ray if the intersect_plane func isn't useful
+    // cursor.translation = ray_cast.get_point(100.0);
+    // cursor.translation = player.translation+dir*100.0;
+
+    // 
+
+
 
 
     // [IDEA]
     // could compute distance of all potential collisions and then check the point on the ray at each of those points
     // This could be super inefficient but for a first collision version it should be fine, also don't need to deal with meshes
     // Just use mesh.compute_aabb() to determine collision for now,
-    // Might be quicker to collide_aabb::colide() with the aabb box of the target and just a long rectangle lmao
 
     // for (i,tran) in &collision_objects {
     //     let collision_mesh = meshes.get(&i.0).unwrap();
