@@ -65,16 +65,17 @@ fn setup_entities(
     commands.spawn(Camera2dBundle::default());
 
     // cursor
-    let ball_radius = 8.0;
-    let ball_mesh:Mesh = shape::Circle::new(ball_radius).into();
-    let ball_material = ColorMaterial::from(Color::rgb(100.,100.,100.));
-    let ball_pos: Vec3 = Vec3::new(0.0, 0.0, 0.0);
+    let cursor_radius = 4.0;
+    // let cursor_mesh:Mesh = shape::Circle::new(cursor_radius).into();
+    let cursor_mesh:Mesh = shape::Quad::new(vec2(1.0, 1.0)).into();
+    let cursor_material = ColorMaterial::from(Color::rgb(100.,100.,100.));
+    let cursor_pos: Vec3 = Vec3::new(0.0, 0.0, 0.0);
 
     commands.spawn(( 
         ColorMesh2dBundle {
-            mesh: meshes.add(ball_mesh).into(),
-            material: materials.add(ball_material),
-            transform: Transform::from_translation(ball_pos),
+            mesh: meshes.add(cursor_mesh).into(),
+            material: materials.add(cursor_material),
+            transform: Transform::from_translation(cursor_pos),
             ..default()
         },
         MouseCursorObj,
@@ -185,36 +186,55 @@ fn player_movement(
 
 fn firing_test(
     player: Query<&Transform, With<PlayerObj>>,
-    cursor_obj: Query<&Transform, With<MouseCursorObj>>,
     collision_objects: Query<(&bevy::sprite::Mesh2dHandle, &Transform), With<RayCollision>>,
     meshes: Res<Assets<Mesh>>,
+    mouse_pos: Res<MousePosition>,
 
-    // for debug coloring ray_object
+    // for debug coloring ray_object and stuff
+    mut cursor_obj: Query<&mut Transform, (With<MouseCursorObj>, Without<PlayerObj>, Without<RayCollision>, Without<RayObj>)>,
     mut ray_object: Query<&Handle<ColorMaterial>, With<RayObj>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let player = player.single();
-    let cursor = cursor_obj.single();
-
-    // Not sure if this will be useful or not
-    let ray_cast = Ray { origin: player.translation, direction: player.translation-cursor.translation };
-
-    // For debug coloring ray object thingy
     let mut ray_obj_material = materials.get_mut(ray_object.single_mut()).unwrap();
 
+    let player = player.single();
 
+    let dir = -vec3(player.translation.x-mouse_pos.x, player.translation.y-mouse_pos.y, player.translation.z).normalize();
+
+    // cursor.translation = player.translation+dir*100.0;
     
+    for (mesh_handle, transform) in &collision_objects {
+        let mesh = meshes.get(&mesh_handle.0).expect("\n\n[MESH DOESN'T EXIST]\n\n");
+        // Simple collision, just aabb collision with the second collision just being a point on the ray of the same distance as the player to the object in question
+        // could check on multiple points while getting closer
 
 
-    // [IDEA]
-    // could compute distance of all potential collisions and then check the point on the ray at each of those points
-    // This could be super inefficient but for a first collision version it should be fine, also don't need to deal with meshes
-    // Just use mesh.compute_aabb() to determine collision for now,
-    // Might be quicker to collide_aabb::colide() with the aabb box of the target and just a long rectangle lmao
+        let a_pos = player.translation+dir * player.translation.distance(transform.translation);
+        let a_size = vec2(1.0, 1.0);
+        
+        
+        let b_aabb = mesh.compute_aabb().unwrap();
+        
+        let b_pos = transform.translation;
+        let b_size = b_aabb.half_extents*2.0;
+        
+        let collision = collide_aabb::collide(a_pos, a_size, b_pos, vec2(b_size.x, b_size.y));
+        
+        if collision.is_some() {
+            ray_obj_material.color.set_b(0.0);
+            ray_obj_material.color.set_g(0.0);
+        }else{
+            ray_obj_material.color.set_b(1.0);
+            ray_obj_material.color.set_g(1.0);
+        }
+        
+        let mut cursor = cursor_obj.single_mut();
 
-    // for (i,tran) in &collision_objects {
-    //     let collision_mesh = meshes.get(&i.0).unwrap();
-    // }   
+        cursor.translation = a_pos*0.95;
+        cursor.scale = vec3(3.0,3.0,0.0)
+        // cursor.scale = b_aabb.half_extents.into()
+        
+    }
 }
 
 fn draw_ray(
