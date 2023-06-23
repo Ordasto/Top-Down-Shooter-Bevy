@@ -155,27 +155,27 @@ fn player_movement(
     let mut camera = camera.get_single_mut().expect("No camera or more than one camera");
 
     // This vec3 just allows me to normalise speed when going diagonal to avoid diagonal movement being faster then normal movement
-    let mut velocity = vec3(0.0, 0.0, 0.0);
+    let mut direction = vec3(0.0, 0.0, 0.0);
 
     // players speed, might move to a resource to allow it to be modified by other functions
     let speed = 5.0;
     
     if keyboard_input.pressed(KeyCode::W) {
-        velocity.y += 1.0;
+        direction.y += 1.0;
     }
     if keyboard_input.pressed(KeyCode::S) {
-        velocity.y -= 1.0
+        direction.y -= 1.0
     }
     if keyboard_input.pressed(KeyCode::D) {
-        velocity.x += 1.0;
+        direction.x += 1.0;
     }
     if keyboard_input.pressed(KeyCode::A) {
-        velocity.x -= 1.0;
+        direction.x -= 1.0;
     }
 
-    player.translation += velocity.normalize_or_zero() * speed;
+    player.translation += direction.normalize_or_zero() * speed;
     
-    // Loose camera follow could be done by checking dist from player to camera and applying velocity*speed to them if it's larger than a arbitrary follow dist thingy
+    // Loose camera follow could be done by checking dist from player to camera and applying direction*speed to them if it's larger than a arbitrary follow dist thingy
     // for dist theres probably an inbuilt function or pythagoras or just check x and y and move them seperatly
 
     // Cba right now it doesn't matter as much as getting normal functionality going like shooting and stuff (do it if i can't be bothered with other shit)
@@ -184,37 +184,33 @@ fn player_movement(
 }
 
 fn firing_test(
-    player: Query<&Transform, With<PlayerObj>>,
-    cursor_obj: Query<&Transform, With<MouseCursorObj>>,
     collision_objects: Query<(&bevy::sprite::Mesh2dHandle, &Transform), With<RayCollision>>,
+    collision_ray: Query<(&bevy::sprite::Mesh2dHandle, &Transform), With<RayObj>>,
     meshes: Res<Assets<Mesh>>,
-
+    
     // for debug coloring ray_object
     mut ray_object: Query<&Handle<ColorMaterial>, With<RayObj>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let player = player.single();
-    let cursor = cursor_obj.single();
-
-    // Not sure if this will be useful or not
-    let ray_cast = Ray { origin: player.translation, direction: player.translation-cursor.translation };
-
     // For debug coloring ray object thingy
     let mut ray_obj_material = materials.get_mut(ray_object.single_mut()).unwrap();
-
-
     
+    let (ray_mesh_handle, ray_transform) = collision_ray.single();
+    let ray_mesh = meshes.get(&ray_mesh_handle.0).unwrap();
 
 
-    // [IDEA]
-    // could compute distance of all potential collisions and then check the point on the ray at each of those points
-    // This could be super inefficient but for a first collision version it should be fine, also don't need to deal with meshes
-    // Just use mesh.compute_aabb() to determine collision for now,
-    // Might be quicker to collide_aabb::colide() with the aabb box of the target and just a long rectangle lmao
+    for (collision_mesh_handle, collision_transform) in &collision_objects {
+        let collision_mesh = meshes.get(&collision_mesh_handle.0).unwrap();
+        let a_pos = ray_transform.translation;
+        let a_size = ray_transform.scale.truncate();
+        let b_pos = collision_transform.translation;
+        let b_size = Vec3::from(collision_mesh.compute_aabb().unwrap().half_extents*2.0).truncate();
 
-    // for (i,tran) in &collision_objects {
-    //     let collision_mesh = meshes.get(&i.0).unwrap();
-    // }   
+        
+
+    }
+
+
 }
 
 fn draw_ray(
@@ -227,7 +223,7 @@ fn draw_ray(
     // finally it makes the ray_obj point towards the mouse position (look_at())
     // this has the effect of drawing a line between the player and the cursor
 
-    // Might want to turn this into a plugin or something, twas an absolute pain to make
+    // Might want to turn this into a plugin or something, twas an absolute pain
     let player = player.single();
     let mut ray_obj = ray_object.single_mut();
     
